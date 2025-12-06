@@ -1,30 +1,31 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Галерея</title>
+  <title>Галерея работ</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:Inter,system-ui, -apple-system, 'Segoe UI', Roboto, Arial;padding:20px;background:#fafafa}
+    .grid{display:flex;flex-wrap:wrap;gap:10px}
+    .grid img{width:220px;border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.06)}
+  </style>
 </head>
 <body>
   <h1>Галерея работ</h1>
-
-  <div id="photos"></div>
+  <div id="grid" class="grid"></div>
 
   <script>
-    async function loadGallery() {
+    async function load(){
       const res = await fetch('/gallery');
       const data = await res.json();
-
-      const box = document.getElementById('photos');
-      data.images.forEach(url => {
+      const g = document.getElementById('grid');
+      (data.images || []).forEach(u=>{
         const img = document.createElement('img');
-        img.src = url;
-        img.style.width='220px';
-        img.style.margin='6px';
-        box.appendChild(img);
+        img.src = u;
+        g.appendChild(img);
       });
     }
-    loadGallery();
+    load();
   </script>
 </body>
 </html>
