@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Галерея</title>
+</head>
+<body>
+  <h1>Галерея работ</h1>
+
+  <div id="photos"></div>
+
+  <script>
+    async function loadGallery() {
+      const res = await fetch('/gallery');
+      const data = await res.json();
+
+      const box = document.getElementById('photos');
+      data.images.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.width='220px';
+        img.style.margin='6px';
+        box.appendChild(img);
+      });
+    }
+    loadGallery();
+  </script>
+</body>
+</html>

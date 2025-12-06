@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Админ — Вход</title>
+  <style>
+    body { font-family: sans-serif; background:#f5f5f5; display:flex; justify-content:center; padding-top:80px; }
+    .box { background:white; padding:28px; border-radius:12px; width:320px; box-shadow:0 0 20px rgba(0,0,0,0.08); }
+    input { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #ccc; }
+    button { width:100%; padding:10px; margin-top:16px; background:#233247; color:white; border:none; border-radius:8px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Вход</h2>
+    <input id="login" placeholder="Логин">
+    <input id="password" type="password" placeholder="Пароль">
+    <button onclick="loginAdmin()">Войти</button>
+  </div>
+
+  <script>
+    async function loginAdmin() {
+      const login = document.getElementById('login').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/login', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ login, password })
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        localStorage.setItem('session', data.session);
+        window.location.href = '/admin/dashboard.html';
+      } else {
+        alert('Ошибка входа');
+      }
+    }
+  </script>
+</body>
+</html>

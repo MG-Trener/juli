@@ -1,0 +1,34 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Админ — Фото</title>
+  <style>
+    body { font-family:sans-serif; padding:20px; }
+    input[type=file] { margin-top:20px; }
+    button { margin-top:12px; padding:10px 20px; background:#233247; color:white; border:none; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <h2>Загрузка фото</h2>
+  <input id="file" type="file">
+  <button onclick="uploadImage()">Загрузить</button>
+
+  <script>
+    async function uploadImage() {
+      const file = document.getElementById('file').files[0];
+      if (!file) return alert('Выберите файл');
+
+      const form = new FormData();
+      form.append('file', file);
+
+      const res = await fetch('/upload', { method:'POST', body: form });
+      const data = await res.json();
+
+      if (data.success) alert('Готово');
+      else console.log(data);
+    }
+  </script>
+</body>
+</html>
