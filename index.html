@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Гаврилычева Юлия — Премиум мужские стрижки</title>
+  <meta name="description" content="Юлия — мастер мужских стрижек, победитель конкурсов. Премиум-качество и индивидуальный подход в Астане.">
+  <meta name="theme-color" content="#F5F7F9">
+
+  <style>
+    /* ====== СТИЛИ (лаконичный, спокойные тона, премиум) ====== */
+    :root{
+      --bg:#F5F7F9; /* светлый фон */
+      --card:#FFFFFF;
+      --accent:#233247; /* глубокий графит */
+      --muted:#7B8794;
+      --gold:#C7A17A; /* мягкое золото для акцентов */
+      --radius:14px;
+      --maxw:1100px;
+      --container-pad:24px;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--accent);-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:var(--maxw);margin:0 auto;padding:40px var(--container-pad)}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff, #f1f3f5);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);box-shadow:0 6px 18px rgba(35,50,71,0.06)}
+    .brand h1{font-size:18px;margin:0}
+    .nav{display:flex;gap:14px;align-items:center}
+    .btn{background:var(--accent);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600}
+    .btn-ghost{border:1px solid rgba(35,50,71,0.08);padding:8px 12px;border-radius:10px;background:transparent}
+
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:36px;align-items:center;margin-top:36px}
+    .hero-left{padding:28px;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.9));border-radius:var(--radius);box-shadow:0 10px 30px rgba(35,50,71,0.05)}
+    .kicker{display:inline-block;padding:6px 10px;background:rgba(199,161,122,0.12);color:var(--gold);border-radius:999px;font-weight:600;margin-bottom:12px}
+    .hero-left h2{margin:6px 0 12px;font-size:28px}
+    .hero-left p{color:var(--muted);line-height:1.6}
+
+    .stats{display:flex;gap:18px;margin-top:18px}
+    .stat{background:var(--card);padding:12px;border-radius:12px;flex:1;text-align:center;box-shadow:0 6px 20px rgba(35,50,71,0.04)}
+    .stat strong{display:block;font-size:18px}
+    .hero-right{border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#fff,#f8fafb);box-shadow:0 14px 40px rgba(35,50,71,0.06);min-height:320px;display:flex;align-items:center;justify-content:center}
+    .photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted)}
+    .photo-placeholder img{max-width:100%;height:auto;display:block}
+
+    /* Секции */
+    section{margin-top:28px}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 8px 28px rgba(35,50,71,0.04)}
+    .card h3{margin:0 0 8px}
+    .muted{color:var(--muted)}
+
+    /* Certificates carousel */
+    .certs{display:flex;gap:12px;overflow:hidden;padding:12px;border-radius:12px;background:linear-gradient(180deg,#fff,#fafbfc);box-shadow:0 8px 20px rgba(35,50,71,0.03)}
+    .certs img{height:80px;border-radius:8px;object-fit:cover}
+
+    /* Contacts */
+    .contact{display:flex;gap:18px;align-items:center}
+    .contact .phone{font-weight:700}
+
+    footer{margin-top:40px;padding:20px 0;color:var(--muted);text-align:center}
+
+    /* адаптив */
+    @media (max-width:980px){
+      .hero{grid-template-columns:1fr}
+      .cards{grid-template-columns:repeat(1,1fr)}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">J</div>
+        <div>
+          <h1>Юлия Гаврилычева</h1>
+          <div class="muted">Премиум мужские стрижки · Астана</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a class="btn-ghost" href="#about">О мастере</a>
+        <a class="btn-ghost" href="#services">Услуги</a>
+        <a class="btn" id="bookBtn" href="https://wa.me/77714387808?text=Здравствуйте%2C+хочу+записаться+на+стрижку">Записаться в WhatsApp</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-left">
+          <div class="kicker">Победитель конкурсов · Сертифицированный мастер</div>
+          <h2>Индивидуальные мужские стрижки премиум-класса</h2>
+          <p>Я — Гаврилычева Юлия. Специализируюсь на мужских стрижках, которые подчёркивают характер и стиль. Более 10 лет практики, множество пройденных курсов и побед в профессиональных соревнованиях.</p>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="muted">Опыт</div>
+              <strong>10+ лет</strong>
+            </div>
+            <div class="stat">
+              <div class="muted">Клиентов</div>
+              <strong>2000+</strong>
+            </div>
+            <div class="stat">
+              <div class="muted">Гарантия</div>
+              <strong>Индивидуальный подход</strong>
+            </div>
+          </div>
+
+        </div>
+
+        <aside class="hero-right">
+          <div class="photo-placeholder" id="heroPhoto">
+            <!-- Здесь — фото мастера. Замените содержимое <img> на своё изображение. -->
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#F1F3F5"/><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zM6 20.5c0-2.67 3.58-4 6-4s6 1.33 6 4v.5H6v-.5z" fill="#D6DCE3"/></svg>
+            <div style="margin-top:12px">Загрузите фото в Личном кабинете</div>
+          </div>
+        </aside>
+      </section>
+
+      <section id="about">
+        <div class="cards">
+          <div class="card">
+            <h3>О мастере</h3>
+            <p class="muted">Юлия — лауреат множества профессиональных конкурсов, прошла международные и локальные курсы повышения квалификации. Работает со всеми типами волос и стилями — от классики до современных модных образов.</p>
+          </div>
+          <div class="card">
+            <h3>Подход</h3>
+            <p class="muted">Разбираем пожелания клиента, подбираем форму стрижки под форму лица и образ жизни. В работе используются профессиональные инструменты и премиум-средства по уходу за волосами.</p>
+          </div>
+          <div class="card">
+            <h3>Гарантии</h3>
+            <p class="muted">Если результат не устроил — корректировка в течении 7 дней. Клиентская лояльность и аккуратность в деталях — наш приоритет.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="services">
+        <h2>Услуги</h2>
+        <div class="cards" style="margin-top:12px">
+          <div class="card">
+            <h3>Классическая мужская стрижка</h3>
+            <p class="muted">Подходит для делового стиля. Включает мытьё, стрижку, укладку.</p>
+          </div>
+          <div class="card">
+            <h3>Современная градуированная стрижка</h3>
+            <p class="muted">Современные техники, текстурирование и индивидуальная укладка.</p>
+          </div>
+          <div class="card">
+            <h3>Стрижка + уход</h3>
+            <p class="muted">Стрижка с подбором уходовых средств, восстановительная процедура по запросу.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="certs">
+        <h2>Сертификаты и награды</h2>
+        <div class="certs" id="certsRow" style="margin-top:12px">
+          <!-- Поменяйте изображения на реальные сертификаты. Сейчас — заглушки -->
+          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><rect width='100%25' height='100%25' fill='%23F8F9FA'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%237B8794' font-size='14'>Сертификат 1</text></svg>" alt="cert1">
+          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><rect width='100%25' height='100%25' fill='%23F8F9FA'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%237B8794' font-size='14'>Сертификат 2</text></svg>" alt="cert2">
+          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='120'><rect width='100%25' height='100%25' fill='%23F8F9FA'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%237B8794' font-size='14'>Награда</text></svg>" alt="cert3">
+        </div>
+      </section>
+
+      <section id="reviews">
+        <h2>Отзывы</h2>
+        <div style="margin-top:12px" class="card">
+          <p class="muted">"Лучший мастер! Всегда ухожу довольным — четко и аккуратно." — Клиент, Астана</p>
+        </div>
+      </section>
+
+      <section id="contact">
+        <h2>Записаться</h2>
+        <div class="card contact" style="margin-top:12px;align-items:center">
+          <div>
+            <div class="muted">WhatsApp</div>
+            <div class="phone"><a href="https://wa.me/77714387808?text=Здравствуйте%2C+хочу+записаться+на+стрижку">+7 771 438 7808</a></div>
+            <div class="muted" style="margin-top:8px">Instagram: <a href="https://instagram.com/juli_stylist_" target="_blank">@juli_stylist_</a></div>
+            <div class="muted" style="margin-top:8px">Город: Астана</div>
+          </div>
+
+          <div style="margin-left:auto;min-width:220px">
+            <a class="btn" href="https://wa.me/77714387808?text=Здравствуйте%2C+хочу+записаться+на+стрижку">Записаться в WhatsApp</a>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;color:var(--muted);font-size:13px">Для загрузки фото работ в личном кабинете — опции описаны ниже.</div>
+      </section>
+
+    </main>
+
+    <footer>
+      © <span id="year"></span> Юлия — Juli Stylist · Астана · Instagram: <a href="https://instagram.com/juli_stylist_" target="_blank">@juli_stylist_</a>
+    </footer>
+  </div>
+
+  <script>
+    // ====== Простая логика: год, плавный скролл, автоскролл сертификатов ======
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Плавный скролл для внутренних ссылок
+    document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{
+      e.preventDefault();
+      document.querySelector(a.getAttribute('href')).scrollIntoView({behavior:'smooth',block:'start'});
+    }));
+
+    // Небольшая анимация автоскролла для сертификатов
+    (function autoScroll(){
+      const row = document.getElementById('certsRow');
+      if(!row) return;
+      let pos = 0;
+      setInterval(()=>{
+        pos += 1;
+        if(pos > row.scrollWidth/3) pos = 0;
+        row.scrollTo({left:pos, behavior:'smooth'});
+      },3000);
+    })();
+
+    // Быстрая функция, чтобы заменить заглушку фото — используется позже при ручной загрузке
+    function setHeroImage(url){
+      const container = document.getElementById('heroPhoto');
+      container.innerHTML = '<img src="'+url+'" alt="Юлия" style="width:100%;height:100%;object-fit:cover">';
+    }
+
+    // ПРИМЕЧАНИЕ: Для реальной загрузки фото на сайт нужна серверная часть или CMS.
+    // Внизу я опишу варианты, как сделать "личный кабинет" для загрузки фото (Cloudflare Images, Netlify CMS, Google Drive + скрипт и т.д.)
+
+  </script>
+
+  <!--
+    ====== Инструкции по деплою в Cloudflare Pages ======
+    1) Создай новый репозиторий на GitHub (или GitLab). Добавь этот файл как index.html в корень репозитория.
+    2) На pages.cloudflare.com нажми Create a project -> Connect to Git -> выбери репозиторий -> Deploy.
+    3) В настройках укажи ветку (обычно main) и путь (root). Cloudflare Pages автоматически развернёт сайт и даст домен вида https://<project>.pages.dev
+    4) Чтобы подключить свой домен, в разделе Custom domains добавь домен и следуй подсказкам Cloudflare (DNS записи). HTTPS — будет автоматически.
+
+    ====== Как сделать загрузку фото (личный кабинет) для сайта на Cloudflare Pages ======
+    Cloudflare Pages — статический хостинг. Чтобы хранить фото и загружать их из браузера, используй один из подходов:
+    A) Cloudflare Images (платно/по использованию): позволяет загружать и хранить изображения с API, затем показывать их на сайте.
+    B) Headless CMS (Sanity, Strapi, Netlify CMS): создаёшь административную панель, загружаешь изображения, CMS отдаёт JSON, сайт подгружает их динамически.
+    C) Простое решение: загружать изображения в Google Drive / Dropbox и вставлять прямые ссылки в админ-панели (или простая Google Sheets + скрипт).
+    D) Если хочешь, я могу подготовить минимальную админ-страницу с инструкцией по подключению к Cloudflare Images или к Netlify CMS.
+
+    ====== Замена фото и сертификатов ======
+    - Чтобы заменить фото мастера: открой index.html и найди функцию setHeroImage(url) — вызови её внизу скрипта с URL загруженного изображения.
+    - Для сертификатов: замени <img src="data:..."> на реальные URL картинок.
+
+    ====== Файлы ======
+    Этот документ — single-file лендинг (весь HTML + CSS + JS). Если нужно разделить на отдельные файлы (styles.css, script.js), скажи — я разнесу.
+  -->
+
+</body>
+</html>
