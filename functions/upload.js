@@ -3,28 +3,19 @@ export async function onRequest(context) {
 
   // Only POST
   if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ ok: false, error: 'POST only' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ ok: false, error: 'POST only' }, 405);
   }
 
   // Check session cookie
   const cookie = request.headers.get('cookie') || '';
   const match = cookie.split(';').map(s => s.trim()).find(s => s.startsWith('session='));
   if (!match) {
-    return new Response(JSON.stringify({ ok: false, error: 'Not authenticated' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ ok: false, error: 'Not authenticated' }, 401);
   }
 
   const sessionValue = match.split('=')[1];
   if (sessionValue !== env.ADMIN_PASSWORD_HASH) {
-    return new Response(JSON.stringify({ ok: false, error: 'Invalid session' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ ok: false, error: 'Invalid session' }, 401);
   }
 
   // Parse form data
@@ -32,33 +23,37 @@ export async function onRequest(context) {
   const file = form.get('file');
 
   if (!file) {
-    return new Response(JSON.stringify({ ok: false, error: 'No file provided' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ ok: false, error: 'No file provided' }, 400);
   }
 
-  // Convert File to ArrayBuffer
+  // Read file
   const bytes = await file.arrayBuffer();
   const blob = new Blob([bytes], { type: file.type });
 
-  // Prepare form to Cloudflare Images
+  // Upload to Cloudflare Images
   const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
 
   const cfForm = new FormData();
   cfForm.append('file', blob, file.name);
 
-  // Upload
   const resp = await fetch(uploadUrl, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${env.CF_IMAGES_TOKEN}`
+      Authorization: `Bearer ${env.CF_IMAGES_TOKEN}`
     },
     body: cfForm
   });
 
-  const json = await resp.json();
+  const jsonResp = await resp.json();
 
-  return new Response(JSON.stringify(json), {
-    status: resp.status,
-    headers: { 'Content-Type
+  // Return result
+  return json({ ok: true, result: jsonResp });
+}
+
+// Helper for consistent responses
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
