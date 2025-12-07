@@ -9,7 +9,7 @@ export async function onRequest(context) {
     const password = data.password || '';
 
     if (login !== env.ADMIN_LOGIN) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid login' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid login (login mismatch)' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
     }
 
     // compute SHA-256 and base64 encode
@@ -19,8 +19,24 @@ export async function onRequest(context) {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashString = btoa(String.fromCharCode(...hashArray));
 
+    // DEBUG — показываем реальный хэш Cloudflare
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'DEBUG HASH',
+      calculated: hashString,
+      expected: env.ADMIN_PASSWORD_HASH
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    /*
+    // original check (временно отключён)
     if (hashString !== env.ADMIN_PASSWORD_HASH) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid password' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid password' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Set session cookie equal to the password hash (stateless)
@@ -32,6 +48,7 @@ export async function onRequest(context) {
     });
 
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+    */
   } catch (err) {
     return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' }});
   }
