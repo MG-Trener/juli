@@ -29,19 +29,16 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
   },true);
 })();
 
-// Быстрый переход преподавателя к редактору материалов и загрузка управления прогрессом.
+// Быстрый переход преподавателя к редактору материалов.
 (function(){
   if(!/\/admin\.html$/.test(location.pathname))return;
-  const addTools=()=>{
+  const addLink=()=>{
     const actions=document.querySelector('.top > div:last-child');
     if(actions&&!document.getElementById('materialsAdminLink')){
       const link=document.createElement('a');link.id='materialsAdminLink';link.className='btn';link.href='materials-admin.html';link.textContent='Материалы курсов';link.style.marginRight='6px';actions.insertBefore(link,actions.firstChild);
     }
-    if(!document.getElementById('adminProgressScript')){
-      const script=document.createElement('script');script.id='adminProgressScript';script.src='admin-progress.js?v=20260825-3';script.defer=true;document.head.appendChild(script);
-    }
   };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addTools);else addTools();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addLink);else addLink();
 })();
 
 // Явная обратная связь после сохранения доступов ученика.
@@ -71,7 +68,7 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
         const actionsRight=card.querySelector('.actions-right'),btn=document.getElementById('save-'+studentId),statusEl=document.getElementById('status');
         const failed=(statusEl?.textContent||'').toLowerCase().includes('ошибка');
         const feedback=document.createElement('div');feedback.className='student-save-feedback '+(failed?'err':'ok');feedback.textContent=failed?'✕ Не удалось сохранить изменения':'✓ Изменения успешно сохранены';actionsRight?.prepend(feedback);requestAnimationFrame(()=>feedback.classList.add('show'));
-        if(btn){if(failed)btn.textContent='Повторить сохранение';else{btn.textContent='Сохранено ✓';btn.classList.add('saved');setTimeout(()=>{if(document.body.contains(btn)){btn.textContent='Сохранить';btn.classList.remove('saved')}},2800)}}
+        if(btn){if(failed)btn.textContent='Повторить сохранение';else{btn.textContent='Сохранено ✓';btn.classList.add('saved');setTimeout(()=>{if(document.body.contains(btn)){btn.textContent='Сохранить доступы';btn.classList.remove('saved')}},2800)}}
         if(!failed)setTimeout(()=>{if(document.body.contains(feedback))feedback.remove()},4500);
       };
       wrapped.__juliFeedbackWrapped=true;window.saveUser=wrapped;
