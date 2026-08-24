@@ -47,6 +47,70 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addLink);else addLink();
 })();
 
+// Удалённый из кабинета пользователь считается удалённым для интерфейса:
+// не показывается в списке и не участвует в статистике.
+(function(){
+  if(!/\/admin\.html$/.test(location.pathname))return;
+  let attempts=0;
+  const timer=setInterval(()=>{
+    attempts++;
+    try{
+      if(typeof updateSummary!=='function'||typeof render!=='function'||typeof allStudents==='undefined'||typeof accessRows==='undefined'){
+        if(attempts>80)clearInterval(timer);
+        return;
+      }
+      clearInterval(timer);
+
+      const originalUpdateSummary=updateSummary;
+      updateSummary=function(){
+        allStudents=(allStudents||[]).filter(s=>!s.archived);
+        const currentIds=new Set(allStudents.map(s=>s.id));
+        const currentAccess=(accessRows||[]).filter(r=>currentIds.has(r.student_id));
+        const activeIds=new Set(allStudents.filter(s=>s.is_active).map(s=>s.id));
+        const activeAccess=currentAccess.filter(r=>activeIds.has(r.student_id));
+        studentCount.textContent='Ученики: '+allStudents.length;
+        activeCount.textContent='Активные: '+allStudents.filter(s=>s.is_active).length;
+        accessCount.textContent='Открытых курсов: '+activeAccess.filter(r=>r.access_granted).length;
+        paidCount.textContent='Оплачено: '+currentAccess.filter(r=>r.paid).length;
+      };
+
+      const originalRender=render;
+      render=function(){
+        allStudents=(allStudents||[]).filter(s=>!s.archived);
+        originalRender();
+        document.querySelectorAll('.danger').forEach(btn=>{
+          if((btn.textContent||'').includes('Удалить из списка'))btn.textContent='Удалить';
+        });
+        const note=document.querySelector('.notice');
+        if(note)note.textContent='Удалённые пользователи полностью скрываются из кабинета и не учитываются в статистике. Прогресс обучения подтверждает только преподаватель.';
+      };
+
+      if(typeof archiveUser==='function'){
+        const originalArchive=archiveUser;
+        archiveUser=async function(id){
+          if(!confirm('Удалить пользователя? Он исчезнет из кабинета, потеряет доступ к курсам и больше не будет учитываться в статистике.'))return;
+          const now=new Date().toISOString();
+          const {error:pErr}=await db.from('profiles').update({archived:true,is_active:false,blocked_at:now}).eq('id',id);
+          if(pErr){status.textContent='Ошибка удаления: '+pErr.message;return}
+          const {error:aErr}=await db.from('course_access').update({access_granted:false,updated_at:now}).eq('student_id',id);
+          if(aErr){status.textContent='Пользователь удалён, но не удалось закрыть доступы: '+aErr.message;return}
+          allStudents=(allStudents||[]).filter(s=>s.id!==id);
+          accessRows=(accessRows||[]).filter(r=>r.student_id!==id);
+          accessMap=new Map(accessRows.map(x=>[x.student_id+'-'+x.course_level,x]));
+          updateSummary();
+          render();
+          status.textContent='Пользователь удалён.';
+        };
+      }
+
+      updateSummary();
+      render();
+    }catch(err){
+      console.warn('Admin deleted-user cleanup:',err);
+    }
+  },100);
+})();
+
 // Явная обратная связь после сохранения доступов ученика.
 (function(){
   if(!/\/admin\.html$/.test(location.pathname))return;
