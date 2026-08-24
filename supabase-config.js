@@ -29,16 +29,28 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
   },true);
 })();
 
-// Быстрый переход преподавателя к редактору материалов.
+// Инструменты кабинета преподавателя.
 (function(){
   if(!/\/admin\.html$/.test(location.pathname))return;
-  const addLink=()=>{
+  const addTools=()=>{
     const actions=document.querySelector('.top > div:last-child');
     if(actions&&!document.getElementById('materialsAdminLink')){
-      const link=document.createElement('a');link.id='materialsAdminLink';link.className='btn';link.href='materials-admin.html';link.textContent='Материалы курсов';link.style.marginRight='6px';actions.insertBefore(link,actions.firstChild);
+      const link=document.createElement('a');
+      link.id='materialsAdminLink';
+      link.className='btn';
+      link.href='materials-admin.html';
+      link.textContent='Материалы курсов';
+      link.style.marginRight='6px';
+      actions.insertBefore(link,actions.firstChild);
+    }
+    if(!document.getElementById('adminProgressV2')){
+      const script=document.createElement('script');
+      script.id='adminProgressV2';
+      script.src='admin-progress-v2.js?v=20260825-1';
+      document.body.appendChild(script);
     }
   };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addLink);else addLink();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addTools);else addTools();
 })();
 
 // Явная обратная связь после сохранения доступов ученика.
