@@ -29,10 +29,10 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
   },true);
 })();
 
-// Инструменты кабинета преподавателя.
+// Быстрый переход преподавателя к редактору материалов.
 (function(){
   if(!/\/admin\.html$/.test(location.pathname))return;
-  const addTools=()=>{
+  const addLink=()=>{
     const actions=document.querySelector('.top > div:last-child');
     if(actions&&!document.getElementById('materialsAdminLink')){
       const link=document.createElement('a');
@@ -43,14 +43,8 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
       link.style.marginRight='6px';
       actions.insertBefore(link,actions.firstChild);
     }
-    if(!document.getElementById('adminProgressV2')){
-      const script=document.createElement('script');
-      script.id='adminProgressV2';
-      script.src='admin-progress-v2.js?v=20260825-1';
-      document.body.appendChild(script);
-    }
   };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addTools);else addTools();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addLink);else addLink();
 })();
 
 // Явная обратная связь после сохранения доступов ученика.
