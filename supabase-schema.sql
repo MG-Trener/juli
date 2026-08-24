@@ -13,25 +13,14 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
--- Миграция для уже существующей базы.
 alter table public.profiles add column if not exists is_active boolean not null default true;
 alter table public.profiles add column if not exists archived boolean not null default false;
 alter table public.profiles add column if not exists blocked_at timestamptz;
-
 alter table public.profiles enable row level security;
 
 create or replace function public.is_owner()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists(
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'owner'
-  );
-$$;
+returns boolean language sql stable security definer set search_path = public
+as $$ select exists(select 1 from public.profiles where id = auth.uid() and role = 'owner'); $$;
 
 create table if not exists public.course_access (
   student_id uuid not null references public.profiles(id) on delete cascade,
@@ -43,7 +32,6 @@ create table if not exists public.course_access (
   updated_at timestamptz not null default now(),
   primary key (student_id, course_level)
 );
-
 alter table public.course_access enable row level security;
 
 create table if not exists public.course_materials (
@@ -57,46 +45,39 @@ create table if not exists public.course_materials (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 alter table public.course_materials enable row level security;
 
--- Один модуль на одну ступень. Индекс создаётся только если в старых данных нет дублей.
+-- Прогресс ученика по модулям.
+create table if not exists public.student_progress (
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  course_level int not null check (course_level between 1 and 7),
+  module_no int not null check (module_no > 0),
+  completed boolean not null default false,
+  completed_at timestamptz,
+  updated_at timestamptz not null default now(),
+  primary key (student_id, course_level, module_no)
+);
+alter table public.student_progress enable row level security;
+
+-- Один модуль на одну ступень, если в старых данных нет дублей.
 do $$
 begin
-  if not exists (
-    select 1 from pg_indexes
-    where schemaname='public' and indexname='course_materials_course_module_uq'
-  ) and not exists (
-    select 1 from public.course_materials
-    group by course_level,module_no
-    having count(*) > 1
-  ) then
-    create unique index course_materials_course_module_uq
-      on public.course_materials(course_level,module_no);
+  if not exists (select 1 from pg_indexes where schemaname='public' and indexname='course_materials_course_module_uq')
+     and not exists (select 1 from public.course_materials group by course_level,module_no having count(*) > 1) then
+    create unique index course_materials_course_module_uq on public.course_materials(course_level,module_no);
   end if;
 end $$;
 
--- Сервер сам обновляет updated_at, клиенту не нужно доверять время устройства.
 create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-set search_path = public
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
+returns trigger language plpgsql set search_path = public
+as $$ begin new.updated_at = now(); return new; end; $$;
 
 drop trigger if exists course_access_set_updated_at on public.course_access;
-create trigger course_access_set_updated_at
-before update on public.course_access
-for each row execute procedure public.set_updated_at();
-
+create trigger course_access_set_updated_at before update on public.course_access for each row execute procedure public.set_updated_at();
 drop trigger if exists course_materials_set_updated_at on public.course_materials;
-create trigger course_materials_set_updated_at
-before update on public.course_materials
-for each row execute procedure public.set_updated_at();
+create trigger course_materials_set_updated_at before update on public.course_materials for each row execute procedure public.set_updated_at();
+drop trigger if exists student_progress_set_updated_at on public.student_progress;
+create trigger student_progress_set_updated_at before update on public.student_progress for each row execute procedure public.set_updated_at();
 
 drop policy if exists "student reads own profile" on public.profiles;
 drop policy if exists "owner updates profiles" on public.profiles;
@@ -105,54 +86,59 @@ drop policy if exists "student reads own course access" on public.course_access;
 drop policy if exists "owner manages course access" on public.course_access;
 drop policy if exists "student reads allowed materials" on public.course_materials;
 drop policy if exists "owner manages materials" on public.course_materials;
+drop policy if exists "student reads own progress" on public.student_progress;
+drop policy if exists "student manages own progress" on public.student_progress;
+drop policy if exists "owner reads progress" on public.student_progress;
 
 create policy "student reads own profile" on public.profiles
 for select using (id = auth.uid() or public.is_owner());
-
 create policy "owner updates profiles" on public.profiles
 for update using (public.is_owner()) with check (public.is_owner());
-
 create policy "owner inserts profiles" on public.profiles
 for insert with check (public.is_owner());
 
 create policy "student reads own course access" on public.course_access
 for select using (
-  (student_id = auth.uid() and exists (
-    select 1 from public.profiles p
-    where p.id = auth.uid() and p.is_active = true and p.archived = false
-  ))
+  (student_id = auth.uid() and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_active = true and p.archived = false))
   or public.is_owner()
 );
-
 create policy "owner manages course access" on public.course_access
 for all using (public.is_owner()) with check (public.is_owner());
 
 create policy "student reads allowed materials" on public.course_materials
 for select using (
-  (
-    published = true
-    and exists (
-      select 1
-      from public.course_access ca
-      join public.profiles p on p.id = ca.student_id
-      where ca.student_id = auth.uid()
-        and ca.course_level = course_materials.course_level
-        and ca.access_granted = true
-        and p.is_active = true
-        and p.archived = false
-    )
-  )
-  or public.is_owner()
+  (published = true and exists (
+    select 1 from public.course_access ca join public.profiles p on p.id = ca.student_id
+    where ca.student_id = auth.uid() and ca.course_level = course_materials.course_level
+      and ca.access_granted = true and p.is_active = true and p.archived = false
+  )) or public.is_owner()
 );
-
 create policy "owner manages materials" on public.course_materials
 for all using (public.is_owner()) with check (public.is_owner());
 
+create policy "student reads own progress" on public.student_progress
+for select using (student_id = auth.uid() or public.is_owner());
+create policy "student manages own progress" on public.student_progress
+for all using (
+  student_id = auth.uid()
+  and exists (
+    select 1 from public.course_access ca join public.profiles p on p.id = ca.student_id
+    where ca.student_id = auth.uid() and ca.course_level = student_progress.course_level
+      and ca.access_granted = true and p.is_active = true and p.archived = false
+  )
+) with check (
+  student_id = auth.uid()
+  and exists (
+    select 1 from public.course_access ca join public.profiles p on p.id = ca.student_id
+    where ca.student_id = auth.uid() and ca.course_level = student_progress.course_level
+      and ca.access_granted = true and p.is_active = true and p.archived = false
+  )
+);
+create policy "owner reads progress" on public.student_progress
+for select using (public.is_owner());
+
 create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
+returns trigger language plpgsql security definer set search_path = public
 as $$
 begin
   insert into public.profiles (id,email,full_name,is_active,archived)
@@ -163,9 +149,7 @@ end;
 $$;
 
 drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-after insert on auth.users
-for each row execute procedure public.handle_new_user();
+create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
 -- Аккаунт преподавателя:
 -- update public.profiles set role='owner' where email='mihagavr@gmail.com';
