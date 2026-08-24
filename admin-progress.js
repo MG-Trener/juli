@@ -10,6 +10,7 @@
   style.textContent=`
     .progress-admin-btn{border-color:rgba(154,211,168,.30)!important;color:#bfe4c6!important}
     .progress-modal-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(4,7,11,.78);backdrop-filter:blur(10px);display:grid;place-items:center;padding:18px}
+    .progress-modal-backdrop[hidden]{display:none!important}
     .progress-modal{width:min(900px,100%);max-height:min(820px,92vh);overflow:auto;border:1px solid rgba(221,178,121,.28);border-radius:26px;background:linear-gradient(155deg,#18212c,#0f151e);box-shadow:0 30px 90px rgba(0,0,0,.55);color:#f7f3ec}
     .progress-modal-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:22px 24px;background:rgba(18,25,35,.96);border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter:blur(14px)}
     .progress-modal-head h2{font:500 30px Georgia,serif;margin:4px 0}.progress-modal-head p{margin:0;color:#aeb5c1;font-size:13px}.progress-close{width:40px;height:40px;padding:0;border-radius:50%;font-size:20px}
@@ -24,15 +25,16 @@
   const backdrop=document.createElement('div');
   backdrop.className='progress-modal-backdrop';
   backdrop.hidden=true;
+  backdrop.setAttribute('aria-hidden','true');
   backdrop.innerHTML=`<section class="progress-modal" role="dialog" aria-modal="true"><div class="progress-modal-head"><div><div style="color:#d2a56c;font-size:10px;font-weight:900;letter-spacing:.13em">ПРОГРЕСС ОБУЧЕНИЯ</div><h2 id="progressStudentName">Ученик</h2><p>Завершение модулей отмечает только преподаватель.</p></div><button class="progress-close" type="button" aria-label="Закрыть">×</button></div><div id="progressBody" class="progress-body"></div><div class="progress-footer"><div id="progressStatus" class="progress-status"></div><button id="progressSave" class="progress-save" type="button">Сохранить прогресс</button></div></section>`;
   document.body.appendChild(backdrop);
   const body=backdrop.querySelector('#progressBody'),status=backdrop.querySelector('#progressStatus'),save=backdrop.querySelector('#progressSave');
-  const close=()=>{backdrop.hidden=true;currentStudent=null};
+  const close=()=>{backdrop.hidden=true;backdrop.setAttribute('aria-hidden','true');currentStudent=null};
   backdrop.querySelector('.progress-close').onclick=close;
   backdrop.addEventListener('click',e=>{if(e.target===backdrop)close()});
 
   async function openProgress(studentId){
-    currentStudent=studentId;status.className='progress-status';status.textContent='Загрузка...';backdrop.hidden=false;
+    currentStudent=studentId;status.className='progress-status';status.textContent='Загрузка...';backdrop.hidden=false;backdrop.setAttribute('aria-hidden','false');
     const [{data:student,error:sErr},{data:access,error:aErr},{data:progress,error:pErr}]=await Promise.all([
       db.from('profiles').select('full_name,email').eq('id',studentId).single(),
       db.from('course_access').select('course_level,access_granted').eq('student_id',studentId),
