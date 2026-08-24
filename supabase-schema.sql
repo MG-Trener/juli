@@ -60,6 +60,44 @@ create table if not exists public.course_materials (
 
 alter table public.course_materials enable row level security;
 
+-- Один модуль на одну ступень. Индекс создаётся только если в старых данных нет дублей.
+do $$
+begin
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname='public' and indexname='course_materials_course_module_uq'
+  ) and not exists (
+    select 1 from public.course_materials
+    group by course_level,module_no
+    having count(*) > 1
+  ) then
+    create unique index course_materials_course_module_uq
+      on public.course_materials(course_level,module_no);
+  end if;
+end $$;
+
+-- Сервер сам обновляет updated_at, клиенту не нужно доверять время устройства.
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists course_access_set_updated_at on public.course_access;
+create trigger course_access_set_updated_at
+before update on public.course_access
+for each row execute procedure public.set_updated_at();
+
+drop trigger if exists course_materials_set_updated_at on public.course_materials;
+create trigger course_materials_set_updated_at
+before update on public.course_materials
+for each row execute procedure public.set_updated_at();
+
 drop policy if exists "student reads own profile" on public.profiles;
 drop policy if exists "owner updates profiles" on public.profiles;
 drop policy if exists "owner inserts profiles" on public.profiles;
