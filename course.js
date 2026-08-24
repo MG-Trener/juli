@@ -1,24 +1,216 @@
-const courseCatalog=window.JULI_COURSE_STRUCTURE||{};
-const level=Number(document.body.dataset.courseLevel);
-const course=courseCatalog[level];
-const configured=window.JULI_SUPABASE_URL&&!window.JULI_SUPABASE_URL.startsWith('YOUR_')&&window.JULI_SUPABASE_ANON_KEY&&!window.JULI_SUPABASE_ANON_KEY.startsWith('YOUR_');
-const db=configured&&window.supabase?window.supabase.createClient(window.JULI_SUPABASE_URL,window.JULI_SUPABASE_ANON_KEY):null;
-const $=id=>document.getElementById(id);
-const app=$('app'),notice=$('notice'),modules=$('modules'),locked=$('locked'),lockedTitle=$('lockedTitle'),lockedText=$('lockedText'),courseTitle=$('courseTitle'),courseSubtitle=$('courseSubtitle'),courseLevel=$('courseLevel'),out=$('out');
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-let currentProfile=null,completed=new Set();
+(function () {
+  'use strict';
 
-function blockKind(text){const t=text.trim().toLowerCase();if(t.startsWith('практика')||t.startsWith('задание'))return['Практика','practice'];if(t.startsWith('важно')||t.startsWith('обратите внимание'))return['Важно','important'];if(t.startsWith('цель'))return['Что вы изучите',''];if(t.startsWith('алгоритм')||t.startsWith('последовательность'))return['Алгоритм работы',''];if(t.startsWith('основн')||t.startsWith('ключев'))return['Ключевые моменты',''];return['Теория','']}
-function lessonHtml(content){return String(content||'').split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean).map(p=>{const [label,cls]=blockKind(p);return `<div class="lesson-block ${cls}"><strong>${label}</strong><p>${esc(p)}</p></div>`}).join('')}
-function contiguousCompleted(){let n=0;while(course&&n<course.modules.length&&completed.has(n+1))n++;return n}
-function ensureProgress(){let el=$('courseProgress');if(el)return el;el=document.createElement('section');el.id='courseProgress';el.className='course-progress';notice.insertAdjacentElement('afterend',el);return el}
-function renderProgress(){if(currentProfile?.role==='owner')return;const el=ensureProgress();const done=contiguousCompleted(),total=course.modules.length,percent=Math.round(done/total*100),current=Math.min(done+1,total);el.innerHTML=`<div class="course-progress-top"><div><span class="course-progress-kicker">Ваш прогресс</span><strong>${done===total?'Ступень завершена':`Сейчас открыт модуль ${current} из ${total}`}</strong></div><div class="course-progress-value">${percent}%</div></div><div class="course-progress-track"><div class="course-progress-fill" style="width:${percent}%"></div></div><div class="course-progress-steps">${Array.from({length:total},(_,i)=>{const n=i+1,doneStep=n<=done,currentStep=n===current&&done<total;return `<span class="${doneStep?'done':currentStep?'current':''}">${doneStep?'✓':n}</span>`}).join('')}</div><div class="course-progress-note">${done===total?'Все модули подтверждены преподавателем.':`После подтверждения преподавателем модуля ${current} автоматически откроется следующий.`}</div>`}
-}
-function renderModules(materials){const byModule=new Map();materials.forEach(x=>{if(!byModule.has(x.module_no))byModule.set(x.module_no,[]);byModule.get(x.module_no).push(x)});const owner=currentProfile?.role==='owner',doneCount=contiguousCompleted(),unlockedThrough=owner?course.modules.length:Math.min(doneCount+1,course.modules.length);modules.innerHTML=course.modules.map((def,i)=>{const n=i+1,rows=byModule.get(n)||[],title=rows[0]?.title||def.title,content=rows.map(r=>r.content).filter(Boolean).join('\n\n'),done=!owner&&n<=doneCount,unlocked=owner||n<=unlockedThrough;if(!unlocked)return `<article class="module module-locked" id="module-${n}"><div class="module-lock-icon">🔒</div><div><div class="eyebrow">Модуль ${n}</div><h2>${esc(title)}</h2><div class="module-locked-text">Содержание откроется после подтверждения преподавателем предыдущего модуля.</div></div></article>`;return `<article class="module ${done?'completed':''} ${!owner&&n===unlockedThrough&&doneCount<course.modules.length?'current':''}" id="module-${n}"><div class="eyebrow">Модуль ${n}${done?' · ПРОЙДЕН':''}</div><h2>${esc(title)}</h2>${content?`<div class="lesson">${lessonHtml(content)}</div>`:`<div class="module-empty">Материал модуля пока не опубликован преподавателем.</div>`}<div class="module-footer"><span class="module-state">${owner?'Преподаватель просматривает опубликованный материал':done?'✓ Завершение подтверждено преподавателем':'Текущий модуль · ожидает подтверждения преподавателя'}</span></div></article>`}).join('')}
-function scrollToHash(){if(!location.hash)return;const target=document.querySelector(location.hash);if(target&&!target.classList.contains('module-locked'))target.scrollIntoView({behavior:'smooth',block:'start'})}
-function lock(title,text){lockedTitle.textContent=title;lockedText.textContent=text;locked.classList.remove('hidden');app.classList.add('hidden')}
+  function el(id) { return document.getElementById(id); }
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch];
+    });
+  }
 
-async function init(){try{if(!course){lock('Структура курса не загружена','Обновите страницу.');return}document.title=`${course.title} — JULI`;courseTitle.textContent=course.title;courseSubtitle.textContent=course.subtitle;courseLevel.textContent=`Ступень ${level}`;if(!db){lock('Система авторизации не настроена','Не удалось подключить авторизацию.');return}const {data:{user},error:uErr}=await db.auth.getUser();if(uErr||!user){location.href='login.html';return}const {data:profile,error:pErr}=await db.from('profiles').select('*').eq('id',user.id).single();if(pErr||!profile){lock('Профиль не найден','Войдите повторно или обратитесь к преподавателю.');return}currentProfile=profile;if(profile.role!=='owner'&&((Object.hasOwn(profile,'is_active')&&!profile.is_active)||(Object.hasOwn(profile,'archived')&&profile.archived))){await db.auth.signOut();location.href='login.html?blocked=1';return}let allowed=profile.role==='owner';if(!allowed){const {data:access,error:aErr}=await db.from('course_access').select('access_granted').eq('student_id',user.id).eq('course_level',level).maybeSingle();if(aErr){lock('Не удалось проверить доступ','Обновите страницу или обратитесь к преподавателю.');return}allowed=!!access?.access_granted}if(!allowed){lock('Доступ к этой ступени закрыт','Преподаватель ещё не разрешил вам доступ к этому курсу.');return}let progress=[];if(profile.role!=='owner'){const {data,error}=await db.from('student_progress').select('module_no,completed').eq('student_id',user.id).eq('course_level',level);if(error){lock('Не удалось загрузить прогресс','Преподавателю нужно применить актуальную схему Supabase.');return}progress=data||[]}completed=new Set(progress.filter(x=>x.completed).map(x=>Number(x.module_no)));const {data:materials,error:mErr}=await db.from('course_materials').select('module_no,title,content,sort_order').eq('course_level',level).eq('published',true).order('sort_order').order('module_no');if(mErr){console.error('Course materials error:',mErr);lock('Материалы временно недоступны','Не удалось загрузить содержание курса. Проверьте настройки Supabase.');return}locked.classList.add('hidden');app.classList.remove('hidden');notice.textContent=profile.role==='owner'?'Режим преподавателя: просмотр опубликованной версии курса.':'Материалы открываются последовательно. Переход к следующему модулю подтверждает преподаватель.';renderProgress();renderModules(materials||[]);setTimeout(scrollToHash,50)}catch(err){console.error('Course init error:',err);lock('Не удалось открыть курс','Произошла ошибка загрузки. Обновите страницу; если ошибка повторится, обратитесь к преподавателю.')}}
+  var level = Number(document.body.getAttribute('data-course-level'));
+  var catalog = window.JULI_COURSE_STRUCTURE || {};
+  var course = catalog[level];
+  var app = el('app');
+  var notice = el('notice');
+  var modules = el('modules');
+  var locked = el('locked');
+  var lockedTitle = el('lockedTitle');
+  var lockedText = el('lockedText');
+  var courseTitle = el('courseTitle');
+  var courseSubtitle = el('courseSubtitle');
+  var courseLevel = el('courseLevel');
+  var out = el('out');
+  var db = null;
+  var profile = null;
+  var completed = {};
 
-if(out)out.onclick=async()=>{if(db)await db.auth.signOut();location.href='./'};
-init();
+  function showError(title, text) {
+    if (app) app.classList.add('hidden');
+    if (lockedTitle) lockedTitle.textContent = title;
+    if (lockedText) lockedText.textContent = text;
+    if (locked) locked.classList.remove('hidden');
+  }
+
+  function contiguousDone() {
+    var n = 0;
+    while (course && course.modules && n < course.modules.length && completed[n + 1] === true) n++;
+    return n;
+  }
+
+  function blockKind(text) {
+    var t = String(text || '').trim().toLowerCase();
+    if (t.indexOf('практика') === 0 || t.indexOf('задание') === 0) return ['Практика', 'practice'];
+    if (t.indexOf('важно') === 0 || t.indexOf('обратите внимание') === 0) return ['Важно', 'important'];
+    if (t.indexOf('цель') === 0) return ['Что вы изучите', ''];
+    if (t.indexOf('алгоритм') === 0 || t.indexOf('последовательность') === 0) return ['Алгоритм работы', ''];
+    if (t.indexOf('основн') === 0 || t.indexOf('ключев') === 0) return ['Ключевые моменты', ''];
+    return ['Теория', ''];
+  }
+
+  function lessonHtml(content) {
+    return String(content || '').split(/\n\s*\n/).map(function (x) { return x.trim(); }).filter(Boolean).map(function (part) {
+      var kind = blockKind(part);
+      return '<div class="lesson-block ' + kind[1] + '"><strong>' + kind[0] + '</strong><p>' + esc(part) + '</p></div>';
+    }).join('');
+  }
+
+  function renderProgress() {
+    if (!course || !profile || profile.role === 'owner') return;
+    var box = el('courseProgress');
+    if (!box) {
+      box = document.createElement('section');
+      box.id = 'courseProgress';
+      box.className = 'course-progress';
+      notice.insertAdjacentElement('afterend', box);
+    }
+    var total = course.modules.length;
+    var done = contiguousDone();
+    var percent = Math.round(done / total * 100);
+    var current = done < total ? done + 1 : total;
+    var steps = '';
+    for (var i = 1; i <= total; i++) {
+      var cls = i <= done ? 'done' : (i === current && done < total ? 'current' : '');
+      steps += '<span class="' + cls + '">' + (i <= done ? '✓' : i) + '</span>';
+    }
+    box.innerHTML = '<div class="course-progress-top"><div><span class="course-progress-kicker">Ваш прогресс</span><strong>' +
+      (done === total ? 'Ступень завершена' : 'Открыт модуль ' + current + ' из ' + total) +
+      '</strong></div><div class="course-progress-value">' + percent + '%</div></div>' +
+      '<div class="course-progress-track"><div class="course-progress-fill" style="width:' + percent + '%"></div></div>' +
+      '<div class="course-progress-steps">' + steps + '</div>' +
+      '<div class="course-progress-note">' +
+      (done === total ? 'Все модули подтверждены преподавателем.' : 'Следующий модуль откроется после подтверждения преподавателем текущего.') +
+      '</div>';
+  }
+
+  function renderModules(materialRows) {
+    var grouped = {};
+    (materialRows || []).forEach(function (row) {
+      var n = Number(row.module_no);
+      if (!grouped[n]) grouped[n] = [];
+      grouped[n].push(row);
+    });
+
+    var owner = profile && profile.role === 'owner';
+    var doneCount = contiguousDone();
+    var unlockedThrough = owner ? course.modules.length : Math.min(doneCount + 1, course.modules.length);
+    var html = '';
+
+    course.modules.forEach(function (def, idx) {
+      var n = idx + 1;
+      var rows = grouped[n] || [];
+      var title = rows.length && rows[0].title ? rows[0].title : def.title;
+      var isUnlocked = owner || n <= unlockedThrough;
+      var isDone = !owner && n <= doneCount;
+
+      if (!isUnlocked) {
+        html += '<article class="module module-locked" id="module-' + n + '">' +
+          '<div class="module-lock-icon">🔒</div><div><div class="eyebrow">Модуль ' + n + '</div>' +
+          '<h2>' + esc(title) + '</h2><div class="module-locked-text">Откроется после подтверждения предыдущего модуля преподавателем.</div></div></article>';
+        return;
+      }
+
+      var content = rows.map(function (r) { return r.content || ''; }).filter(Boolean).join('\n\n');
+      html += '<article class="module ' + (isDone ? 'completed ' : '') + (!owner && n === unlockedThrough && doneCount < course.modules.length ? 'current' : '') + '" id="module-' + n + '">' +
+        '<div class="eyebrow">Модуль ' + n + (isDone ? ' · ПРОЙДЕН' : '') + '</div>' +
+        '<h2>' + esc(title) + '</h2>' +
+        (content ? '<div class="lesson">' + lessonHtml(content) + '</div>' : '<div class="module-empty">Материал модуля пока не опубликован преподавателем.</div>') +
+        '<div class="module-footer"><span class="module-state">' +
+        (owner ? 'Режим преподавателя' : (isDone ? '✓ Подтверждено преподавателем' : 'Текущий модуль · ожидает подтверждения')) +
+        '</span></div></article>';
+    });
+
+    modules.innerHTML = html;
+  }
+
+  async function init() {
+    try {
+      if (!course || !app || !modules || !notice) {
+        showError('Не удалось открыть курс', 'Страница курса загружена некорректно.');
+        return;
+      }
+
+      document.title = course.title + ' — JULI';
+      courseTitle.textContent = course.title;
+      courseSubtitle.textContent = course.subtitle || '';
+      courseLevel.textContent = 'Ступень ' + level;
+
+      if (!window.supabase || !window.JULI_SUPABASE_URL || !window.JULI_SUPABASE_ANON_KEY) {
+        showError('Авторизация недоступна', 'Не удалось подключиться к системе обучения.');
+        return;
+      }
+
+      db = window.supabase.createClient(window.JULI_SUPABASE_URL, window.JULI_SUPABASE_ANON_KEY);
+      var userResult = await db.auth.getUser();
+      var user = userResult && userResult.data ? userResult.data.user : null;
+      if (!user) {
+        location.href = 'login.html';
+        return;
+      }
+
+      var profileResult = await db.from('profiles').select('*').eq('id', user.id).single();
+      if (profileResult.error || !profileResult.data) {
+        showError('Профиль не найден', 'Войдите повторно или обратитесь к преподавателю.');
+        return;
+      }
+      profile = profileResult.data;
+
+      if (profile.role !== 'owner' && ((Object.prototype.hasOwnProperty.call(profile, 'is_active') && !profile.is_active) || (Object.prototype.hasOwnProperty.call(profile, 'archived') && profile.archived))) {
+        await db.auth.signOut();
+        location.href = 'login.html?blocked=1';
+        return;
+      }
+
+      var allowed = profile.role === 'owner';
+      if (!allowed) {
+        var accessResult = await db.from('course_access').select('access_granted').eq('student_id', user.id).eq('course_level', level).maybeSingle();
+        if (accessResult.error) {
+          showError('Не удалось проверить доступ', 'Обновите страницу или обратитесь к преподавателю.');
+          return;
+        }
+        allowed = !!(accessResult.data && accessResult.data.access_granted);
+      }
+      if (!allowed) {
+        showError('Доступ к ступени закрыт', 'Преподаватель ещё не открыл этот курс.');
+        return;
+      }
+
+      if (profile.role !== 'owner') {
+        var progressResult = await db.from('student_progress').select('module_no,completed').eq('student_id', user.id).eq('course_level', level);
+        if (progressResult.error) {
+          console.error(progressResult.error);
+          showError('Не удалось загрузить прогресс', 'Преподавателю нужно повторно выполнить актуальный supabase-schema.sql.');
+          return;
+        }
+        (progressResult.data || []).forEach(function (row) {
+          if (row.completed) completed[Number(row.module_no)] = true;
+        });
+      }
+
+      var materialResult = await db.from('course_materials').select('module_no,title,content,sort_order').eq('course_level', level).eq('published', true).order('sort_order', { ascending: true }).order('module_no', { ascending: true });
+      if (materialResult.error) {
+        console.error(materialResult.error);
+        showError('Материалы временно недоступны', 'Проверьте актуальную схему Supabase.');
+        return;
+      }
+
+      locked.classList.add('hidden');
+      app.classList.remove('hidden');
+      notice.textContent = profile.role === 'owner' ? 'Режим преподавателя: опубликованная версия курса.' : 'Следующий модуль открывает преподаватель после подтверждения текущего.';
+      renderProgress();
+      renderModules(materialResult.data || []);
+    } catch (err) {
+      console.error(err);
+      showError('Не удалось открыть курс', 'Ошибка загрузки курса. Обновите страницу или обратитесь к преподавателю.');
+    }
+  }
+
+  if (out) {
+    out.addEventListener('click', async function () {
+      try { if (db) await db.auth.signOut(); } catch (e) {}
+      location.href = './';
+    });
+  }
+
+  init();
+})();
