@@ -104,13 +104,35 @@ for select using (
 create policy "owner manages course access" on public.course_access
 for all using (public.is_owner()) with check (public.is_owner());
 
+-- Ученик получает содержимое только уже пройденных модулей и одного текущего.
+-- Например: пока преподаватель не подтвердил модуль 1, содержимое модулей 2-6 база не выдаёт вообще.
 create policy "student reads allowed materials" on public.course_materials
 for select using (
-  (published = true and exists (
-    select 1 from public.course_access ca join public.profiles p on p.id = ca.student_id
-    where ca.student_id = auth.uid() and ca.course_level = course_materials.course_level
-      and ca.access_granted = true and p.is_active = true and p.archived = false
-  )) or public.is_owner()
+  public.is_owner()
+  or (
+    published = true
+    and exists (
+      select 1
+      from public.course_access ca
+      join public.profiles p on p.id = ca.student_id
+      where ca.student_id = auth.uid()
+        and ca.course_level = course_materials.course_level
+        and ca.access_granted = true
+        and p.is_active = true
+        and p.archived = false
+    )
+    and (
+      course_materials.module_no = 1
+      or (
+        select count(*)
+        from public.student_progress sp
+        where sp.student_id = auth.uid()
+          and sp.course_level = course_materials.course_level
+          and sp.completed = true
+          and sp.module_no < course_materials.module_no
+      ) = course_materials.module_no - 1
+    )
+  )
 );
 create policy "owner manages materials" on public.course_materials
 for all using (public.is_owner()) with check (public.is_owner());
