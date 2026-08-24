@@ -2,6 +2,22 @@
 window.JULI_SUPABASE_URL = "https://jsulovquulqixmhdygae.supabase.co";
 window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg";
 
+// Favicon для всех страниц сайта, которые подключают этот файл.
+(function () {
+  const icons = [
+    { rel: 'icon', type: 'image/x-icon', href: 'assets/favicon.ico' },
+    { rel: 'icon', type: 'image/png', sizes: '32x32', href: 'assets/favicon-32x32.png' },
+    { rel: 'icon', type: 'image/png', sizes: '16x16', href: 'assets/favicon-16x16.png' },
+    { rel: 'apple-touch-icon', sizes: '180x180', href: 'assets/apple-touch-icon.png' }
+  ];
+  icons.forEach(icon => {
+    const link = document.createElement('link');
+    Object.entries(icon).forEach(([key, value]) => link.setAttribute(key, value));
+    link.setAttribute('data-juli-favicon', '1');
+    document.head.appendChild(link);
+  });
+})();
+
 // Визуальные эффекты главной страницы.
 (function () {
   if (!document.querySelector('.course-line')) return;
