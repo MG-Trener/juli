@@ -1,4 +1,4 @@
--- JULI: схема авторизации, учеников, доступа к курсам и оплат.
+-- JULI: схема авторизации, учеников, доступа к курсам, материалам и прогрессу.
 -- Можно безопасно выполнять повторно в Supabase SQL Editor.
 
 create table if not exists public.profiles (
@@ -12,7 +12,6 @@ create table if not exists public.profiles (
   blocked_at timestamptz,
   created_at timestamptz not null default now()
 );
-
 alter table public.profiles add column if not exists is_active boolean not null default true;
 alter table public.profiles add column if not exists archived boolean not null default false;
 alter table public.profiles add column if not exists blocked_at timestamptz;
@@ -47,11 +46,11 @@ create table if not exists public.course_materials (
 );
 alter table public.course_materials enable row level security;
 
--- Прогресс ученика по модулям.
+-- Прогресс ученика отмечает только преподаватель.
 create table if not exists public.student_progress (
   student_id uuid not null references public.profiles(id) on delete cascade,
   course_level int not null check (course_level between 1 and 7),
-  module_no int not null check (module_no > 0),
+  module_no int not null check (module_no between 1 and 6),
   completed boolean not null default false,
   completed_at timestamptz,
   updated_at timestamptz not null default now(),
@@ -59,7 +58,6 @@ create table if not exists public.student_progress (
 );
 alter table public.student_progress enable row level security;
 
--- Один модуль на одну ступень, если в старых данных нет дублей.
 do $$
 begin
   if not exists (select 1 from pg_indexes where schemaname='public' and indexname='course_materials_course_module_uq')
@@ -89,6 +87,7 @@ drop policy if exists "owner manages materials" on public.course_materials;
 drop policy if exists "student reads own progress" on public.student_progress;
 drop policy if exists "student manages own progress" on public.student_progress;
 drop policy if exists "owner reads progress" on public.student_progress;
+drop policy if exists "owner manages progress" on public.student_progress;
 
 create policy "student reads own profile" on public.profiles
 for select using (id = auth.uid() or public.is_owner());
@@ -116,26 +115,11 @@ for select using (
 create policy "owner manages materials" on public.course_materials
 for all using (public.is_owner()) with check (public.is_owner());
 
+-- Ученик только читает собственный прогресс. Изменять его может только преподаватель.
 create policy "student reads own progress" on public.student_progress
 for select using (student_id = auth.uid() or public.is_owner());
-create policy "student manages own progress" on public.student_progress
-for all using (
-  student_id = auth.uid()
-  and exists (
-    select 1 from public.course_access ca join public.profiles p on p.id = ca.student_id
-    where ca.student_id = auth.uid() and ca.course_level = student_progress.course_level
-      and ca.access_granted = true and p.is_active = true and p.archived = false
-  )
-) with check (
-  student_id = auth.uid()
-  and exists (
-    select 1 from public.course_access ca join public.profiles p on p.id = ca.student_id
-    where ca.student_id = auth.uid() and ca.course_level = student_progress.course_level
-      and ca.access_granted = true and p.is_active = true and p.archived = false
-  )
-);
-create policy "owner reads progress" on public.student_progress
-for select using (public.is_owner());
+create policy "owner manages progress" on public.student_progress
+for all using (public.is_owner()) with check (public.is_owner());
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public
