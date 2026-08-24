@@ -38,7 +38,7 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
       const link=document.createElement('a');link.id='materialsAdminLink';link.className='btn';link.href='materials-admin.html';link.textContent='Материалы курсов';link.style.marginRight='6px';actions.insertBefore(link,actions.firstChild);
     }
     if(!document.getElementById('adminProgressScript')){
-      const script=document.createElement('script');script.id='adminProgressScript';script.src='admin-progress.js';script.defer=true;document.head.appendChild(script);
+      const script=document.createElement('script');script.id='adminProgressScript';script.src='admin-progress.js?v=20260825-3';script.defer=true;document.head.appendChild(script);
     }
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addTools);else addTools();
