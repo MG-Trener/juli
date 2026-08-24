@@ -18,6 +18,24 @@ window.JULI_SUPABASE_ANON_KEY = "sb_publishable_J1eFJrcv07gEB6Fc4T3mSQ_LmhSCLwg"
   });
 })();
 
+// Быстрый переход преподавателя к редактору учебных материалов.
+(function () {
+  if (!/\/admin\.html$/.test(location.pathname)) return;
+  const addLink = () => {
+    const actions = document.querySelector('.top > div:last-child');
+    if (!actions || document.getElementById('materialsAdminLink')) return;
+    const link = document.createElement('a');
+    link.id = 'materialsAdminLink';
+    link.className = 'btn';
+    link.href = 'materials-admin.html';
+    link.textContent = 'Материалы курсов';
+    link.style.marginRight = '6px';
+    actions.insertBefore(link, actions.firstChild);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addLink);
+  else addLink();
+})();
+
 // Визуальные эффекты главной страницы.
 (function () {
   if (!document.querySelector('.course-line')) return;
