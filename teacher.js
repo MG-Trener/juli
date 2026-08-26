@@ -7,7 +7,7 @@ function status(text,type=''){const e=$('status');e.className='status '+type;e.t
 const doneCount=(student,level)=>progress.filter(x=>x.student_id===student&&Number(x.course_level)===Number(level)&&x.completed).length;
 function allowedLevels(studentId){const opened=new Set(access.filter(x=>x.student_id===studentId&&x.access_granted).map(x=>Number(x.course_level)));return levels.filter(l=>opened.has(l));}
 function render(){
- $('teacherName').textContent=me?.full_name||'Учитель';
+ $('teacherName').textContent=me?.full_name||'Учитель';if($('currentUserName'))$('currentUserName').textContent=me?.full_name||me?.email||'Учитель';
  $('courseChips').innerHTML=levels.length?levels.map(l=>`<span class="chip">${l}. ${courses[l]}</span>`).join(''):'<span class="muted">Суперучитель пока не назначил вам ступени.</span>';
  $('students').innerHTML=students.length?students.map(studentCard).join(''):'<div class="empty">Суперучитель пока не назначил вам учеников.</div>';
 }
