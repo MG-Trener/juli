@@ -1,11 +1,14 @@
--- JULI: RBAC-схема Суперучитель -> Учитель -> Ученик.
+-- JULI: RBAC Суперучитель -> Учитель -> Ученик + Претендент.
+-- Новая регистрация всегда становится Претендентом.
+-- Только Суперучитель открывает ученику ступени. Учитель работает только внутри пересечения:
+-- назначенный ученик + назначенная Учителю ступень + ступень, открытая ученику Суперучителем.
 -- Безопасно выполнять повторно в Supabase SQL Editor.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
-  role text not null default 'student',
+  role text not null default 'candidate',
   course_level int check (course_level between 1 and 7),
   is_active boolean not null default true,
   archived boolean not null default false,
@@ -15,30 +18,18 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists is_active boolean not null default true;
 alter table public.profiles add column if not exists archived boolean not null default false;
 alter table public.profiles add column if not exists blocked_at timestamptz;
-
--- Миграция прежней роли преподавателя.
 alter table public.profiles drop constraint if exists profiles_role_check;
 update public.profiles set role='superteacher' where role='owner';
-alter table public.profiles add constraint profiles_role_check check (role in ('student','teacher','superteacher'));
+alter table public.profiles add constraint profiles_role_check check (role in ('candidate','student','teacher','superteacher'));
+alter table public.profiles alter column role set default 'candidate';
 alter table public.profiles enable row level security;
 
 create or replace function public.is_superteacher()
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select exists(
-    select 1 from public.profiles
-    where id=auth.uid() and role='superteacher' and is_active=true and archived=false
-  );
-$$;
-
+returns boolean language sql stable security definer set search_path=public
+as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='superteacher' and is_active=true and archived=false); $$;
 create or replace function public.is_teacher()
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select exists(
-    select 1 from public.profiles
-    where id=auth.uid() and role='teacher' and is_active=true and archived=false
-  );
-$$;
+returns boolean language sql stable security definer set search_path=public
+as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='teacher' and is_active=true and archived=false); $$;
 
 create table if not exists public.teacher_course_assignments (
   teacher_id uuid not null references public.profiles(id) on delete cascade,
@@ -55,41 +46,9 @@ create table if not exists public.teacher_student_assignments (
   assigned_by uuid references public.profiles(id) on delete set null,
   assigned_at timestamptz not null default now(),
   primary key (teacher_id,student_id),
-  check (teacher_id <> student_id)
+  check (teacher_id<>student_id)
 );
 alter table public.teacher_student_assignments enable row level security;
-
-create or replace function public.teacher_has_student(p_student uuid)
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select public.is_superteacher() or (
-    public.is_teacher() and exists(
-      select 1 from public.teacher_student_assignments
-      where teacher_id=auth.uid() and student_id=p_student
-    )
-  );
-$$;
-
-create or replace function public.teacher_has_course(p_level int)
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select public.is_superteacher() or (
-    public.is_teacher() and exists(
-      select 1 from public.teacher_course_assignments
-      where teacher_id=auth.uid() and course_level=p_level
-    )
-  );
-$$;
-
-create or replace function public.teacher_can_manage_student_course(p_student uuid,p_level int)
-returns boolean language sql stable security definer set search_path = public
-as $$
-  select public.is_superteacher() or (
-    public.is_teacher()
-    and exists(select 1 from public.teacher_student_assignments where teacher_id=auth.uid() and student_id=p_student)
-    and exists(select 1 from public.teacher_course_assignments where teacher_id=auth.uid() and course_level=p_level)
-  );
-$$;
 
 create table if not exists public.course_access (
   student_id uuid not null references public.profiles(id) on delete cascade,
@@ -99,9 +58,30 @@ create table if not exists public.course_access (
   paid_at timestamptz,
   payment_note text,
   updated_at timestamptz not null default now(),
-  primary key (student_id, course_level)
+  primary key (student_id,course_level)
 );
 alter table public.course_access enable row level security;
+
+create or replace function public.teacher_has_student(p_student uuid)
+returns boolean language sql stable security definer set search_path=public
+as $$ select public.is_superteacher() or (public.is_teacher() and exists(select 1 from public.teacher_student_assignments where teacher_id=auth.uid() and student_id=p_student)); $$;
+create or replace function public.teacher_has_course(p_level int)
+returns boolean language sql stable security definer set search_path=public
+as $$ select public.is_superteacher() or (public.is_teacher() and exists(select 1 from public.teacher_course_assignments where teacher_id=auth.uid() and course_level=p_level)); $$;
+create or replace function public.teacher_can_manage_student_course(p_student uuid,p_level int)
+returns boolean language sql stable security definer set search_path=public
+as $$
+  select public.is_superteacher() or (
+    public.is_teacher()
+    and exists(select 1 from public.teacher_student_assignments where teacher_id=auth.uid() and student_id=p_student)
+    and exists(select 1 from public.teacher_course_assignments where teacher_id=auth.uid() and course_level=p_level)
+    and exists(select 1 from public.course_access where student_id=p_student and course_level=p_level and access_granted=true)
+    and exists(select 1 from public.profiles where id=p_student and role='student' and is_active=true and archived=false)
+  );
+$$;
+
+-- Учитель не имеет функции для выдачи/отзыва целой ступени.
+drop function if exists public.teacher_set_course_access(uuid,integer,boolean);
 
 create table if not exists public.course_materials (
   id bigint generated by default as identity primary key,
@@ -123,17 +103,16 @@ create table if not exists public.student_progress (
   completed boolean not null default false,
   completed_at timestamptz,
   updated_at timestamptz not null default now(),
-  primary key (student_id, course_level, module_no)
+  primary key (student_id,course_level,module_no)
 );
 alter table public.student_progress enable row level security;
 
--- Финансы полностью отделены от учительских прав.
 create table if not exists public.course_finance (
   student_id uuid not null references public.profiles(id) on delete cascade,
   course_level int not null check (course_level between 1 and 7),
   teacher_id uuid references public.profiles(id) on delete set null,
   paid boolean not null default false,
-  payment_amount numeric(12,2) not null default 0 check (payment_amount >= 0),
+  payment_amount numeric(12,2) not null default 0 check (payment_amount>=0),
   paid_at timestamptz,
   teacher_reward_percent numeric(5,2) not null default 0 check (teacher_reward_percent between 0 and 100),
   reward_paid boolean not null default false,
@@ -143,11 +122,9 @@ create table if not exists public.course_finance (
   primary key (student_id,course_level)
 );
 alter table public.course_finance enable row level security;
-
--- Перенос прежних отметок оплаты без потери данных.
 insert into public.course_finance(student_id,course_level,paid,paid_at,note)
 select student_id,course_level,paid,paid_at,payment_note from public.course_access
-on conflict (student_id,course_level) do nothing;
+on conflict(student_id,course_level) do nothing;
 
 create table if not exists public.student_groups (
   id bigint generated by default as identity primary key,
@@ -155,9 +132,11 @@ create table if not exists public.student_groups (
   start_date date,
   description text,
   active boolean not null default true,
+  teacher_id uuid references public.profiles(id) on delete set null,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
+alter table public.student_groups add column if not exists teacher_id uuid references public.profiles(id) on delete set null;
 alter table public.student_groups enable row level security;
 
 create table if not exists public.student_group_members (
@@ -168,152 +147,47 @@ create table if not exists public.student_group_members (
 );
 alter table public.student_group_members enable row level security;
 
-do $$
-begin
-  if not exists (select 1 from pg_indexes where schemaname='public' and indexname='course_materials_course_module_uq')
-     and not exists (select 1 from public.course_materials group by course_level,module_no having count(*) > 1) then
-    create unique index course_materials_course_module_uq on public.course_materials(course_level,module_no);
-  end if;
-end $$;
+create index if not exists profiles_role_active_idx on public.profiles(role,archived,is_active);
+create index if not exists course_access_student_granted_idx on public.course_access(student_id,access_granted,course_level);
+create index if not exists teacher_course_teacher_idx on public.teacher_course_assignments(teacher_id,course_level);
+create index if not exists teacher_student_teacher_idx on public.teacher_student_assignments(teacher_id,student_id);
+create index if not exists teacher_student_student_idx on public.teacher_student_assignments(student_id,teacher_id);
+create index if not exists group_members_student_idx on public.student_group_members(student_id,group_id);
+create index if not exists student_groups_teacher_idx on public.student_groups(teacher_id) where teacher_id is not null;
+do $$ begin if not exists(select 1 from pg_indexes where schemaname='public' and indexname='course_materials_course_module_uq') and not exists(select 1 from public.course_materials group by course_level,module_no having count(*)>1) then create unique index course_materials_course_module_uq on public.course_materials(course_level,module_no); end if; end $$;
 
-create or replace function public.set_updated_at()
-returns trigger language plpgsql set search_path = public
-as $$ begin new.updated_at = now(); return new; end; $$;
+create or replace function public.set_updated_at() returns trigger language plpgsql set search_path=public as $$ begin new.updated_at=now(); return new; end; $$;
+drop trigger if exists course_access_set_updated_at on public.course_access; create trigger course_access_set_updated_at before update on public.course_access for each row execute procedure public.set_updated_at();
+drop trigger if exists course_materials_set_updated_at on public.course_materials; create trigger course_materials_set_updated_at before update on public.course_materials for each row execute procedure public.set_updated_at();
+drop trigger if exists student_progress_set_updated_at on public.student_progress; create trigger student_progress_set_updated_at before update on public.student_progress for each row execute procedure public.set_updated_at();
+drop trigger if exists course_finance_set_updated_at on public.course_finance; create trigger course_finance_set_updated_at before update on public.course_finance for each row execute procedure public.set_updated_at();
 
-drop trigger if exists course_access_set_updated_at on public.course_access;
-create trigger course_access_set_updated_at before update on public.course_access for each row execute procedure public.set_updated_at();
-drop trigger if exists course_materials_set_updated_at on public.course_materials;
-create trigger course_materials_set_updated_at before update on public.course_materials for each row execute procedure public.set_updated_at();
-drop trigger if exists student_progress_set_updated_at on public.student_progress;
-create trigger student_progress_set_updated_at before update on public.student_progress for each row execute procedure public.set_updated_at();
-drop trigger if exists course_finance_set_updated_at on public.course_finance;
-create trigger course_finance_set_updated_at before update on public.course_finance for each row execute procedure public.set_updated_at();
+-- Пересоздаём актуальные RLS-политики.
+do $$ declare r record; begin for r in select schemaname,tablename,policyname from pg_policies where schemaname='public' and tablename in ('profiles','teacher_course_assignments','teacher_student_assignments','course_access','course_materials','student_progress','course_finance','student_groups','student_group_members') loop execute format('drop policy if exists %I on %I.%I',r.policyname,r.schemaname,r.tablename); end loop; end $$;
 
--- Учитель может менять только доступ к назначенному ему ученику и только по назначенной ступени.
-create or replace function public.teacher_set_course_access(p_student_id uuid,p_course_level int,p_access_granted boolean)
-returns void language plpgsql security definer set search_path = public
-as $$
-begin
-  if not public.teacher_can_manage_student_course(p_student_id,p_course_level) then
-    raise exception 'Недостаточно прав для управления этой ступенью ученика';
-  end if;
-  insert into public.course_access(student_id,course_level,access_granted,updated_at)
-  values(p_student_id,p_course_level,p_access_granted,now())
-  on conflict(student_id,course_level) do update
-    set access_granted=excluded.access_granted,updated_at=now();
-end;
-$$;
-grant execute on function public.teacher_set_course_access(uuid,int,boolean) to authenticated;
-
--- Удаляем прежние политики перед созданием актуальных.
-do $$ declare r record; begin
-  for r in select schemaname,tablename,policyname from pg_policies
-    where schemaname='public' and tablename in (
-      'profiles','teacher_course_assignments','teacher_student_assignments','course_access','course_materials',
-      'student_progress','course_finance','student_groups','student_group_members'
-    )
-  loop execute format('drop policy if exists %I on %I.%I',r.policyname,r.schemaname,r.tablename); end loop;
-end $$;
-
-create policy "profiles readable by scope" on public.profiles
-for select using (
-  id=auth.uid() or public.is_superteacher() or public.teacher_has_student(id)
-);
-create policy "superteacher updates profiles" on public.profiles
-for update using (public.is_superteacher()) with check (public.is_superteacher());
-create policy "superteacher inserts profiles" on public.profiles
-for insert with check (public.is_superteacher());
-
-create policy "teacher course assignments read" on public.teacher_course_assignments
-for select using (public.is_superteacher() or teacher_id=auth.uid());
-create policy "superteacher manages teacher course assignments" on public.teacher_course_assignments
-for all using (public.is_superteacher()) with check (public.is_superteacher());
-
-create policy "teacher student assignments read" on public.teacher_student_assignments
-for select using (public.is_superteacher() or teacher_id=auth.uid());
-create policy "superteacher manages teacher student assignments" on public.teacher_student_assignments
-for all using (public.is_superteacher()) with check (public.is_superteacher());
-
-create policy "course access read by scope" on public.course_access
-for select using (
-  public.is_superteacher()
-  or public.teacher_can_manage_student_course(student_id,course_level)
-  or (student_id=auth.uid() and exists(select 1 from public.profiles p where p.id=auth.uid() and p.is_active=true and p.archived=false))
-);
-create policy "superteacher manages course access" on public.course_access
-for all using (public.is_superteacher()) with check (public.is_superteacher());
-
-create policy "materials read by role and sequence" on public.course_materials
-for select using (
-  public.is_superteacher()
-  or (public.is_teacher() and public.teacher_has_course(course_level))
-  or (
-    published=true
-    and exists(
-      select 1 from public.course_access ca join public.profiles p on p.id=ca.student_id
-      where ca.student_id=auth.uid() and ca.course_level=course_materials.course_level
-        and ca.access_granted=true and p.is_active=true and p.archived=false
-    )
-    and (
-      course_materials.module_no=1
-      or (
-        select count(*) from public.student_progress sp
-        where sp.student_id=auth.uid() and sp.course_level=course_materials.course_level
-          and sp.completed=true and sp.module_no<course_materials.module_no
-      )=course_materials.module_no-1
-    )
-  )
-);
-create policy "superteacher manages materials" on public.course_materials
-for all using (public.is_superteacher()) with check (public.is_superteacher());
-
-create policy "progress read by scope" on public.student_progress
-for select using (
-  public.is_superteacher() or student_id=auth.uid() or public.teacher_can_manage_student_course(student_id,course_level)
-);
-create policy "staff insert progress" on public.student_progress
-for insert with check (public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level));
-create policy "staff update progress" on public.student_progress
-for update using (public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level))
-with check (public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level));
-create policy "staff delete progress" on public.student_progress
-for delete using (public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level));
-
-create policy "superteacher finance only" on public.course_finance
-for all using (public.is_superteacher()) with check (public.is_superteacher());
-
-create policy "groups read by scope" on public.student_groups
-for select using (
-  public.is_superteacher() or (
-    public.is_teacher() and exists(
-      select 1 from public.student_group_members gm
-      join public.teacher_student_assignments tsa on tsa.student_id=gm.student_id
-      where gm.group_id=student_groups.id and tsa.teacher_id=auth.uid()
-    )
-  )
-);
-create policy "superteacher manages groups" on public.student_groups
-for all using (public.is_superteacher()) with check (public.is_superteacher());
-
-create policy "group members read by scope" on public.student_group_members
-for select using (
-  public.is_superteacher() or exists(
-    select 1 from public.teacher_student_assignments tsa
-    where tsa.teacher_id=auth.uid() and tsa.student_id=student_group_members.student_id
-  )
-);
-create policy "superteacher manages group members" on public.student_group_members
-for all using (public.is_superteacher()) with check (public.is_superteacher());
+create policy "profiles readable by scope" on public.profiles for select using (id=auth.uid() or public.is_superteacher() or public.teacher_has_student(id));
+create policy "superteacher updates profiles" on public.profiles for update using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "superteacher inserts profiles" on public.profiles for insert with check(public.is_superteacher());
+create policy "teacher course assignments read" on public.teacher_course_assignments for select using(public.is_superteacher() or teacher_id=auth.uid());
+create policy "superteacher manages teacher course assignments" on public.teacher_course_assignments for all using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "teacher student assignments read" on public.teacher_student_assignments for select using(public.is_superteacher() or teacher_id=auth.uid());
+create policy "superteacher manages teacher student assignments" on public.teacher_student_assignments for all using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "course access read by scope" on public.course_access for select using(public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level) or (student_id=auth.uid() and exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='student' and p.is_active=true and p.archived=false)));
+create policy "superteacher manages course access" on public.course_access for all using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "materials read by role and sequence" on public.course_materials for select using(public.is_superteacher() or (public.is_teacher() and public.teacher_has_course(course_level)) or (published=true and exists(select 1 from public.course_access ca join public.profiles p on p.id=ca.student_id where ca.student_id=auth.uid() and ca.course_level=course_materials.course_level and ca.access_granted=true and p.role='student' and p.is_active=true and p.archived=false) and (course_materials.module_no=1 or (select count(*) from public.student_progress sp where sp.student_id=auth.uid() and sp.course_level=course_materials.course_level and sp.completed=true and sp.module_no<course_materials.module_no)=course_materials.module_no-1)));
+create policy "superteacher manages materials" on public.course_materials for all using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "progress read by scope" on public.student_progress for select using(public.is_superteacher() or student_id=auth.uid() or public.teacher_can_manage_student_course(student_id,course_level));
+create policy "staff insert progress" on public.student_progress for insert with check(public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level));
+create policy "staff update progress" on public.student_progress for update using(public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level)) with check(public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level));
+create policy "staff delete progress" on public.student_progress for delete using(public.is_superteacher() or public.teacher_can_manage_student_course(student_id,course_level));
+create policy "superteacher finance only" on public.course_finance for all using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "groups read by scope" on public.student_groups for select using(public.is_superteacher() or (public.is_teacher() and teacher_id=auth.uid()));
+create policy "superteacher manages groups" on public.student_groups for all using(public.is_superteacher()) with check(public.is_superteacher());
+create policy "group members read by scope" on public.student_group_members for select using(public.is_superteacher() or exists(select 1 from public.student_groups g where g.id=student_group_members.group_id and g.teacher_id=auth.uid() and public.is_teacher()));
+create policy "superteacher manages group members" on public.student_group_members for all using(public.is_superteacher()) with check(public.is_superteacher());
 
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public
-as $$
-begin
-  insert into public.profiles(id,email,full_name,role,is_active,archived)
-  values(new.id,new.email,coalesce(new.raw_user_meta_data->>'full_name',''),'student',true,false)
-  on conflict(id) do nothing;
-  return new;
-end;
-$$;
+returns trigger language plpgsql security definer set search_path=public
+as $$ begin insert into public.profiles(id,email,full_name,role,is_active,archived) values(new.id,new.email,coalesce(new.raw_user_meta_data->>'full_name',''),'candidate',true,false) on conflict(id) do nothing; return new; end; $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
