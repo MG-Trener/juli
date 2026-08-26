@@ -11,5 +11,7 @@ Disallow: /people-admin.html
 Disallow: /materials-admin.html
 Disallow: /login.html
 Disallow: /register.html
+Disallow: /forgot-password.html
+Disallow: /reset-password.html
 Disallow: /course-
 Sitemap: https://mg-trener.github.io/juli/sitemap.xml
