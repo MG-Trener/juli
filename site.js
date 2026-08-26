@@ -1,13 +1,23 @@
-// Hero: используем оптимизированный WebP, а при ошибке возвращаем PNG.
+// Hero fallback: если WebP недоступен, используем PNG.
 (function(){
   const probe=new Image();
   probe.onerror=()=>{
     const s=document.createElement('style');
-    s.textContent=`.hero:before{background:linear-gradient(90deg,#0a0f16 0%,rgba(10,15,22,.98) 28%,rgba(10,15,22,.79) 48%,rgba(10,15,22,.16) 72%,rgba(10,15,22,.08) 100%),url('assets/hero-model.png') 82% 36%/auto 112% no-repeat}@media(max-width:900px){.hero:before{background-image:linear-gradient(180deg,rgba(10,15,22,.03),rgba(10,15,22,.18) 36%,#0a0f16 62%,#0a0f16),linear-gradient(90deg,rgba(10,15,22,.72),rgba(10,15,22,.12) 54%,transparent),url('assets/hero-model.png');background-size:100% 100%,100% 100%,auto 520px;background-position:center,center,72% 0;background-repeat:no-repeat}}@media(max-width:650px){.hero:before{background-image:linear-gradient(180deg,rgba(10,15,22,.02),rgba(10,15,22,.10) 29%,rgba(10,15,22,.83) 49%,#0a0f16 61%,#0a0f16),linear-gradient(90deg,rgba(10,15,22,.66),rgba(10,15,22,.08) 58%,transparent),url('assets/hero-model.png');background-size:100% 100%,100% 100%,auto 400px;background-position:center,center,70% 0;background-repeat:no-repeat}}`;
+    s.textContent=`.hero:before{background:linear-gradient(90deg,#0a0f16 0%,rgba(10,15,22,.98) 28%,rgba(10,15,22,.79) 48%,rgba(10,15,22,.16) 72%,rgba(10,15,22,.08) 100%),url('assets/hero-model.png') 82% 36%/auto 112% no-repeat}`;
     document.head.appendChild(s);
   };
   probe.src='assets/hero-model.webp';
 })();
+
+// На телефоне подробности карточек раскрываются по кнопке.
+document.querySelectorAll('.course-toggle').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const card=btn.closest('.course');
+    const expanded=card.classList.toggle('expanded');
+    btn.setAttribute('aria-expanded',String(expanded));
+    btn.firstChild.textContent=expanded?'Скрыть подробности ':'Подробнее ';
+  });
+});
 
 // Если пользователь уже вошёл, ведём его сразу в кабинет его роли.
 (async function(){
