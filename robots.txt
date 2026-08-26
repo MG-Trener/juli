@@ -1,7 +1,15 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /candidate.html
 Disallow: /student.html
+Disallow: /teacher.html
+Disallow: /teacher-progress.html
+Disallow: /students-admin.html
+Disallow: /teachers-admin.html
+Disallow: /people-admin.html
+Disallow: /materials-admin.html
 Disallow: /login.html
 Disallow: /register.html
+Disallow: /course-
 Sitemap: https://mg-trener.github.io/juli/sitemap.xml
