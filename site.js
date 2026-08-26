@@ -1,14 +1,35 @@
 // Hero: используем оптимизированный WebP, а при ошибке возвращаем PNG.
-(function(){const probe=new Image();probe.onerror=()=>{const s=document.createElement('style');s.textContent=`.hero:before{background:linear-gradient(90deg,#0a0f16 0%,rgba(10,15,22,.98) 27%,rgba(10,15,22,.78) 47%,rgba(10,15,22,.16) 72%,rgba(10,15,22,.08) 100%),url('assets/hero-model.png') 82% 36%/auto 112% no-repeat}@media(max-width:900px){.hero:before{background-image:linear-gradient(180deg,rgba(10,15,22,.03),rgba(10,15,22,.18) 36%,#0a0f16 62%,#0a0f16),linear-gradient(90deg,rgba(10,15,22,.72),rgba(10,15,22,.12) 54%,transparent),url('assets/hero-model.png');background-size:100% 100%,100% 100%,auto 520px;background-position:center,center,72% 0;background-repeat:no-repeat}}@media(max-width:650px){.hero:before{background-image:linear-gradient(180deg,rgba(10,15,22,.02),rgba(10,15,22,.10) 29%,rgba(10,15,22,.83) 49%,#0a0f16 61%,#0a0f16),linear-gradient(90deg,rgba(10,15,22,.66),rgba(10,15,22,.08) 58%,transparent),url('assets/hero-model.png');background-size:100% 100%,100% 100%,auto 400px;background-position:center,center,70% 0;background-repeat:no-repeat}}`;document.head.appendChild(s)};probe.src='assets/hero-model.webp';})();
-
-// Публичная витрина: публикуем только подтверждённую стоимость первой ступени.
 (function(){
-  const cards=[...document.querySelectorAll('.course')];
-  cards.forEach((card,i)=>{if(i===0)return;const price=card.querySelector('.price');if(price)price.innerHTML='Стоимость по запросу';});
-  const program=document.querySelector('.program-price');
-  if(program){const old=program.querySelector('s'),strong=program.querySelector('strong'),cta=program.querySelector('.program-cta');if(old)old.remove();if(strong)strong.textContent='Стоимость по запросу';if(cta){cta.textContent='Узнать стоимость программы';cta.href='https://wa.me/77777644655?text='+encodeURIComponent('Здравствуйте, хочу узнать стоимость полной программы Парикмахер-колорист JULI');}}
-  const note=document.querySelector('.program-note');if(note)note.textContent='Стоимость полной программы рассчитывается отдельно.';
-  const portalText=document.getElementById('portalText');if(portalText)portalText.textContent='После регистрации вы попадаете в список претендентов. Суперучитель подтверждает статус, назначает роль и открывает доступ к нужным ступеням обучения.';
+  const probe=new Image();
+  probe.onerror=()=>{
+    const s=document.createElement('style');
+    s.textContent=`.hero:before{background:linear-gradient(90deg,#0a0f16 0%,rgba(10,15,22,.98) 28%,rgba(10,15,22,.79) 48%,rgba(10,15,22,.16) 72%,rgba(10,15,22,.08) 100%),url('assets/hero-model.png') 82% 36%/auto 112% no-repeat}@media(max-width:900px){.hero:before{background-image:linear-gradient(180deg,rgba(10,15,22,.03),rgba(10,15,22,.18) 36%,#0a0f16 62%,#0a0f16),linear-gradient(90deg,rgba(10,15,22,.72),rgba(10,15,22,.12) 54%,transparent),url('assets/hero-model.png');background-size:100% 100%,100% 100%,auto 520px;background-position:center,center,72% 0;background-repeat:no-repeat}}@media(max-width:650px){.hero:before{background-image:linear-gradient(180deg,rgba(10,15,22,.02),rgba(10,15,22,.10) 29%,rgba(10,15,22,.83) 49%,#0a0f16 61%,#0a0f16),linear-gradient(90deg,rgba(10,15,22,.66),rgba(10,15,22,.08) 58%,transparent),url('assets/hero-model.png');background-size:100% 100%,100% 100%,auto 400px;background-position:center,center,70% 0;background-repeat:no-repeat}}`;
+    document.head.appendChild(s);
+  };
+  probe.src='assets/hero-model.webp';
 })();
 
-(async function(){const authLink=document.getElementById('authLink'),portalBtn=document.getElementById('portalBtn'),portalText=document.getElementById('portalText');if(!window.supabase||!window.JULI_SUPABASE_URL||!window.JULI_SUPABASE_ANON_KEY)return;try{const db=window.supabase.createClient(window.JULI_SUPABASE_URL,window.JULI_SUPABASE_ANON_KEY);const {data:{session}}=await db.auth.getSession();if(!session?.user)return;const {data:p,error}=await db.from('profiles').select('full_name,role').eq('id',session.user.id).single();if(error||!p)return;const cabinet=p.role==='superteacher'?'admin.html':p.role==='teacher'?'teacher.html':p.role==='student'?'student.html':'candidate.html';const displayName=(p.full_name||session.user.user_metadata?.full_name||session.user.email?.split('@')[0]||'Личный кабинет').trim();authLink.textContent=displayName;authLink.href=cabinet;portalBtn.textContent='Открыть личный кабинет';portalBtn.href=cabinet;if(p.role==='superteacher')portalText.textContent=`Вы вошли как ${displayName}. Откройте панель Суперучителя для управления академией.`;else if(p.role==='teacher')portalText.textContent=`Вы вошли как ${displayName}. Откройте кабинет Учителя для работы с назначенными учениками.`;else if(p.role==='student')portalText.textContent=`Вы вошли как ${displayName}. Перейдите в кабинет, чтобы продолжить обучение.`;else portalText.textContent=`Вы вошли как ${displayName}. Ваша регистрация ожидает распределения Суперучителем.`}catch(err){console.error('JULI auth state:',err)}})();
+// Если пользователь уже вошёл, ведём его сразу в кабинет его роли.
+(async function(){
+  const authLink=document.getElementById('authLink');
+  const portalBtn=document.getElementById('portalBtn');
+  const portalText=document.getElementById('portalText');
+  if(!window.supabase||!window.JULI_SUPABASE_URL||!window.JULI_SUPABASE_ANON_KEY)return;
+  try{
+    const db=window.supabase.createClient(window.JULI_SUPABASE_URL,window.JULI_SUPABASE_ANON_KEY);
+    const {data:{session}}=await db.auth.getSession();
+    if(!session?.user)return;
+    const {data:p,error}=await db.from('profiles').select('full_name,role,is_active,archived').eq('id',session.user.id).single();
+    if(error||!p||!p.is_active||p.archived)return;
+    const cabinet=p.role==='superteacher'?'admin.html':p.role==='teacher'?'teacher.html':p.role==='student'?'student.html':'candidate.html';
+    const displayName=(p.full_name||session.user.user_metadata?.full_name||session.user.email?.split('@')[0]||'Личный кабинет').trim();
+    if(authLink){authLink.textContent=displayName;authLink.href=cabinet;}
+    if(portalBtn){portalBtn.textContent='Открыть личный кабинет';portalBtn.href=cabinet;}
+    if(portalText){
+      if(p.role==='superteacher')portalText.textContent=`Вы вошли как ${displayName}. Откройте панель Суперучителя для управления академией.`;
+      else if(p.role==='teacher')portalText.textContent=`Вы вошли как ${displayName}. Откройте кабинет Учителя для работы с назначенными учениками.`;
+      else if(p.role==='student')portalText.textContent=`Вы вошли как ${displayName}. Перейдите в кабинет, чтобы продолжить обучение.`;
+      else portalText.textContent=`Вы вошли как ${displayName}. Ваша регистрация ожидает распределения Суперучителем.`;
+    }
+  }catch(err){console.error('JULI auth state:',err)}
+})();
