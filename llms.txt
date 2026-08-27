@@ -1,27 +1,37 @@
-# JULI
-> Академия стрижек и окрашивания. Пошаговое обучение от базового уровня до колориста-эксперта.
+# JULI Hair Education
+> Академия очного обучения стрижкам и окрашиванию в Астане и Усть-Каменогорске.
 
-## About
-JULI — сайт курсов по стрижке и окрашиванию.
+## Об академии
+JULI Hair Education — система обучения парикмахеров и колористов по 7 последовательным ступеням.
 Преподаватель: Гаврилычева Юлия Александровна.
-Формат: отдельные ступени обучения и полная программа.
-Контакт: +7 777 764 4655.
+Профессиональный стаж преподавателя: 20 лет.
+Формат: очные занятия в мини-группах, практика на моделях и личный кабинет ученика.
 Основной язык: русский.
 
-## Main page
-- https://mg-trener.github.io/juli/
+## Основные страницы
+- Главная: https://mg-trener.github.io/juli/
+- Преподаватель: https://mg-trener.github.io/juli/teacher/
+- Астана: https://mg-trener.github.io/juli/astana/
+- Усть-Каменогорск: https://mg-trener.github.io/juli/ust-kamenogorsk/
 
-## Courses
+## Курсы
 1. Парикмахер с нуля — 50 000 KZT
-2. Женские стрижки — 75 000 KZT
-3. Колористика — 85 000 KZT
-4. Блонд без ошибок — 95 000 KZT
-5. Современные окрашивания — 120 000 KZT
-6. Продвинутый мастер — 150 000 KZT
-7. Колорист-эксперт — 180 000 KZT
+   https://mg-trener.github.io/juli/courses/parikmaher-s-nulya/
+2. Женские стрижки — стоимость по запросу
+   https://mg-trener.github.io/juli/courses/zhenskie-strizhki/
+3. Колористика — стоимость по запросу
+   https://mg-trener.github.io/juli/courses/koloristika/
+4. Блонд без ошибок — стоимость по запросу
+   https://mg-trener.github.io/juli/courses/blond/
+5. Современные окрашивания — стоимость по запросу
+   https://mg-trener.github.io/juli/courses/sovremennye-okrashivaniya/
+6. Продвинутый мастер — стоимость по запросу
+   https://mg-trener.github.io/juli/courses/prodvinutyi-master/
+7. Колорист-эксперт — стоимость по запросу
+   https://mg-trener.github.io/juli/courses/kolorist-ekspert/
 
-## Full program
-Парикмахер-колорист — 590 000 KZT.
+## Полная программа
+Парикмахер-колорист — стоимость по запросу.
 
-## Contact
+## Контакт
 Телефон и WhatsApp: +7 777 764 4655
